@@ -5,7 +5,7 @@ const http = require('http'), fs = require('fs'), path = require('path'), crypto
 const PORT = process.env.PORT || 3000;
 const SERVER_NAME = (process.env.SERVER_NAME || 'Sword Arena').slice(0, 30);   // имя в списке серверов
 // DEV-меню: ключ задаётся ТОЛЬКО переменной окружения ADMIN_KEY (в коде и на GitHub его нет). Без ключа меню отключено.
-const ADMIN_KEY = process.env.ADMIN_KEY || '';
+const ADMIN_KEY = (process.env.ADMIN_KEY || '').trim().replace(/^(["'])(.*)\1$/, '$2');   // убираем пробелы/переводы строк и случайные кавычки
 const keyOk = k => {
     if (!ADMIN_KEY || typeof k !== 'string') return false;
     const a = Buffer.from(k), b = Buffer.from(ADMIN_KEY);
@@ -151,8 +151,10 @@ function onMessage(c, text) {
     if (!c.joined) return;
 
     if (m.t === 'admin') {   // вход в DEV-меню: права выдаёт только сервер и только по секретному ключу
-        if (adminAllowed() && keyOk(m.k)) { c.admin = true; send(c, { t: 'admin_ok' }); console.log(`# ${c.name} вошёл как админ`); }
-        else send(c, { t: 'admin_no' });
+        if (!ADMIN_KEY) { send(c, { t: 'admin_no', why: 'off' }); console.log('# попытка входа в DEV: ADMIN_KEY не задан на сервере'); return; }
+        if (!adminAllowed()) { send(c, { t: 'admin_no', why: 'rate' }); return; }
+        if (keyOk(typeof m.k === 'string' ? m.k.trim() : m.k)) { c.admin = true; send(c, { t: 'admin_ok' }); console.log(`# ${c.name} вошёл как админ`); }
+        else { send(c, { t: 'admin_no', why: 'wrong' }); console.log(`# ${c.name}: неверный ключ DEV`); }
         return;
     }
     if (m.t === 'cheat') {

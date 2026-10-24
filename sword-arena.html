@@ -284,8 +284,13 @@ try {
 const settings = { aimAssist: isMobile, autoFire: isMobile };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('gunarena_opts') || '{}')); } catch (e) {}
 const optAim = $('opt-aim'), optAuto = $('opt-auto');
+if (!isMobile) {   // аим-ассист и автострельба — только для телефонов
+    settings.aimAssist = false; settings.autoFire = false;
+    optAim.closest('.opt-row').style.display = 'none'; optAuto.closest('.opt-row').style.display = 'none';
+}
 optAim.checked = !!settings.aimAssist; optAuto.checked = !!settings.autoFire;
 optAim.onchange = optAuto.onchange = () => {
+    if (!isMobile) return;
     settings.aimAssist = optAim.checked; settings.autoFire = optAuto.checked;
     try { localStorage.setItem('gunarena_opts', JSON.stringify(settings)); } catch (e) {}
 };
@@ -1133,7 +1138,7 @@ function onNetMessage(m) {
             break;
         case 'snap': applySnapshot(m.p); break;
         case 'admin_ok': cheat.auth = true; $('ch-key').value = ''; chShow(); chSync(); break;
-        case 'admin_no': $('ch-err').textContent = 'Неверный ключ (или меню отключено на сервере)'; break;
+        case 'admin_no': $('ch-err').textContent = m.why === 'off' ? 'На сервере не задана переменная ADMIN_KEY — меню отключено' : m.why === 'rate' ? 'Слишком много попыток, подожди минуту' : 'Неверный ключ: он не совпадает с ADMIN_KEY на сервере'; break;
         case 'shot': {
             const r = net.remotes.get(m.id);
             if (r) {
